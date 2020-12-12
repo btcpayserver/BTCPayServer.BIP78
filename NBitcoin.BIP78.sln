@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NBitcoin.BIP78.Client", "NBitcoin.BIP78.Client\NBitcoin.BIP78.Client.csproj", "{068BAE62-52DE-4200-BB20-FF4D84B007D5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NBitcoin.BIP78.Server", "NBitcoin.BIP78.Server\NBitcoin.BIP78.Server.csproj", "{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{068BAE62-52DE-4200-BB20-FF4D84B007D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{068BAE62-52DE-4200-BB20-FF4D84B007D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{068BAE62-52DE-4200-BB20-FF4D84B007D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{068BAE62-52DE-4200-BB20-FF4D84B007D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
