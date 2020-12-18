@@ -1,4 +1,6 @@
-﻿namespace NBitcoin.BIP78.Client
+﻿using NBitcoin;
+
+namespace BIP78.Sender
 {
     public class PayjoinClientParameters
     {

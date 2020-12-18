@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NBitcoin.BIP78.Client
+namespace BIP78.Sender
 {
     public class PayjoinReceiverHelper
     {

@@ -1,8 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NBitcoin.BIP78.Client", "NBitcoin.BIP78.Client\NBitcoin.BIP78.Client.csproj", "{068BAE62-52DE-4200-BB20-FF4D84B007D5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BIP78.Sender", "BIP78.Sender\BIP78.Sender.csproj", "{068BAE62-52DE-4200-BB20-FF4D84B007D5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NBitcoin.BIP78.Server", "NBitcoin.BIP78.Server\NBitcoin.BIP78.Server.csproj", "{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BIP78.Receiver", "BIP78.Receiver\BIP78.Receiver.csproj", "{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

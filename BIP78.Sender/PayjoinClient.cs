@@ -4,9 +4,10 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NBitcoin;
 using NBitcoin.Payment;
 
-namespace NBitcoin.BIP78.Client
+namespace BIP78.Sender
 {
     public class PayjoinClient
     {

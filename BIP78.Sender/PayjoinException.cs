@@ -1,6 +1,6 @@
 using System;
 
-namespace NBitcoin.BIP78.Client
+namespace BIP78.Sender
 {
     public class PayjoinException : Exception
     {

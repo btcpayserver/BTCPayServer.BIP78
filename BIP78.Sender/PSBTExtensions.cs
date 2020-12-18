@@ -1,8 +1,9 @@
 using System;
 using System.Linq;
+using NBitcoin;
 using NBitcoin.Payment;
 
-namespace NBitcoin.BIP78.Client
+namespace BIP78.Sender
 {
     public static class PSBTExtensions
     {
