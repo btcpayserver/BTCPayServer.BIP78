@@ -1,10 +1,10 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using BIP78.Sender;
+using BTCPayServer.BIP78.Sender;
 using NBitcoin;
 
-namespace BIP78.Receiver
+namespace BTCPayServer.BIP78.Receiver
 {
     public class PayjoinProposalContext
     {

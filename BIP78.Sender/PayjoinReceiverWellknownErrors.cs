@@ -1,4 +1,4 @@
-namespace BIP78.Sender
+namespace BTCPayServer.BIP78.Sender
 {
     public enum PayjoinReceiverWellknownErrors
     {

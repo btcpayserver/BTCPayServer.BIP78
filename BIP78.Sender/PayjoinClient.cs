@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using NBitcoin;
 using NBitcoin.Payment;
 
-namespace BIP78.Sender
+namespace BTCPayServer.BIP78.Sender
 {
     public class PayjoinClient
     {

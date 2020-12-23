@@ -8,16 +8,16 @@
         <RepositoryUrl>https://github.com/BTCPayServer/BTCPayServer.BIP78</RepositoryUrl>
         <PackageTags>NBitcoin Bitcoin Payjoin BIP78 Privacy</PackageTags>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <PackageId>BIP78.Receiver</PackageId>
+        <PackageId>BTCPayServer.BIP78.Receiver</PackageId>
         <Description>A library to help you add BIP78 payjoin receiving support in your bitcoin wallet.</Description>
         <PackageProjectUrl>https://github.com/BTCPayServer/BTCPayServer.BIP78</PackageProjectUrl>
-        <PackageLicenseUrl>https://raw.githubusercontent.com/BTCPayServer/BTCPayServer.BIP78/master/LICENSE</PackageLicenseUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageVersion>0.1.0</PackageVersion>
         <LangVersion>latest</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\BIP78.Sender\BIP78.Sender.csproj" />
+      <ProjectReference Include="..\BIP78.Sender\BTCPayServer.BIP78.Sender.csproj" />
     </ItemGroup>
 
 </Project>

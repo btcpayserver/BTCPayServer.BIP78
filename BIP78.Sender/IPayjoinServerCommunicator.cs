@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NBitcoin;
 
-namespace BIP78.Sender
+namespace BTCPayServer.BIP78.Sender
 {
     public interface IPayjoinServerCommunicator
     {

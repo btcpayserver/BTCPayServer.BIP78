@@ -3,7 +3,7 @@ using System.Linq;
 using NBitcoin;
 using NBitcoin.Payment;
 
-namespace BIP78.Sender
+namespace BTCPayServer.BIP78.Sender
 {
     public static class PSBTExtensions
     {

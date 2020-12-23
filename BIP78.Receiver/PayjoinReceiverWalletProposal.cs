@@ -1,6 +1,6 @@
 ﻿using NBitcoin;
 
-namespace BIP78.Receiver
+namespace BTCPayServer.BIP78.Receiver
 {
     public class PayjoinReceiverWalletProposal 
     {

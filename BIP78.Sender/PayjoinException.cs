@@ -1,6 +1,6 @@
 using System;
 
-namespace BIP78.Sender
+namespace BTCPayServer.BIP78.Sender
 {
     public class PayjoinException : Exception
     {

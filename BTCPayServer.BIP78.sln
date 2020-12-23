@@ -1,8 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BIP78.Sender", "BIP78.Sender\BIP78.Sender.csproj", "{068BAE62-52DE-4200-BB20-FF4D84B007D5}"
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30104.148
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BTCPayServer.BIP78.Sender", "BIP78.Sender\BTCPayServer.BIP78.Sender.csproj", "{068BAE62-52DE-4200-BB20-FF4D84B007D5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BIP78.Receiver", "BIP78.Receiver\BIP78.Receiver.csproj", "{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BTCPayServer.BIP78.Receiver", "BIP78.Receiver\BTCPayServer.BIP78.Receiver.csproj", "{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,5 +21,11 @@ Global
 		{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4EAFF42C-8424-4BBB-93E5-4E0A7DF7EFCC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C3F91CF3-2D53-43A4-A401-F18563F33971}
 	EndGlobalSection
 EndGlobal

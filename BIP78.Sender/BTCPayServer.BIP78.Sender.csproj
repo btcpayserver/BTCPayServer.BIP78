@@ -5,12 +5,12 @@
         <Authors>Andrew Camilleri / Kukks / BTCPay Server</Authors>
         <Copyright>MIT</Copyright>
         <RepositoryUrl>https://github.com/BTCPayServer/BTCPayServer.BIP78</RepositoryUrl>
-        <PackageTags>NBitcoin Bitcoin Payjoin BIP78 Privacy</PackageTags>
+        <PackageTags>BTCPayServer Bitcoin Payjoin BIP78 Privacy</PackageTags>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <PackageId>BIP78.Sender</PackageId>
+        <PackageId>BTCPayServer.BIP78.Sender</PackageId>
         <Description>A library to help you add BIP78 payjoin sending support in your bitcoin wallet.</Description>
         <PackageProjectUrl>https://github.com/BTCPayServer/BTCPayServer.BIP78</PackageProjectUrl>
-        <PackageLicenseUrl>https://raw.githubusercontent.com/BTCPayServer/BTCPayServer.BIP78/master/LICENSE</PackageLicenseUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageVersion>0.1.0</PackageVersion>
         <LangVersion>latest</LangVersion>
     </PropertyGroup>
