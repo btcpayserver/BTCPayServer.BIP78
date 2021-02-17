@@ -22,7 +22,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/master' }} # Publish only when the push is on master
         uses: brandedoutcast/publish-nuget@v2.5.5
         with:
-          PROJECT_FILE_PATH: BIP78.Sender/BIP78.Sender.csproj
+          PROJECT_FILE_PATH: BIP78.Sender/BTCPayServer.BIP78.Sender.csproj
           NUGET_KEY: ${{secrets.NUGET_KEY}}
           PACKAGE_NAME: BIP78.Sender
           INCLUDE_SYMBOLS: true
@@ -32,7 +32,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/master' }} # Publish only when the push is on master
         uses: brandedoutcast/publish-nuget@v2.5.5
         with:
-          PROJECT_FILE_PATH: BIP78.Receiver/BIP78.Receiver.csproj
+          PROJECT_FILE_PATH: BIP78.Receiver/BTCPayServer.BIP78.Receiver.csproj
           NUGET_KEY: ${{secrets.NUGET_KEY}}
           PACKAGE_NAME: BIP78.Receiver
           INCLUDE_SYMBOLS: true
