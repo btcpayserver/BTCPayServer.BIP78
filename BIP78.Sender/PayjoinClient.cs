@@ -20,6 +20,11 @@ namespace BTCPayServer.BIP78.Sender
             _payjoinServerCommunicator = payjoinServerCommunicator;
         }
 
+        public PayjoinClient()
+        {
+            _payjoinServerCommunicator = new HttpClientPayjoinServerCommunicator();
+        }
+
         public Money MaxFeeBumpContribution { get; set; }
         public FeeRate MinimumFeeRate { get; set; }
 
@@ -43,15 +48,16 @@ namespace BTCPayServer.BIP78.Sender
                 .Where(o => o.ScriptPubKey != paymentScriptPubKey)
                 .FirstOrDefault();
             if (changeOutput is PSBTOutput o)
-                optionalParameters.AdditionalFeeOutputIndex = (int)o.Index;
+                optionalParameters.AdditionalFeeOutputIndex = (int) o.Index;
             if (!signedPSBT.TryGetEstimatedFeeRate(out var originalFeeRate))
                 throw new ArgumentException("signedPSBT should have utxo information", nameof(signedPSBT));
             var originalFee = signedPSBT.GetFee();
             if (changeOutput is PSBTOutput)
-                optionalParameters.MaxAdditionalFeeContribution = MaxFeeBumpContribution is null ?
+                optionalParameters.MaxAdditionalFeeContribution = MaxFeeBumpContribution is null
+                    ?
                     // By default, we want to keep same fee rate and a single additional input
-                    originalFeeRate.GetFee(GetVirtualSize(inputScriptType)) :
-                    MaxFeeBumpContribution;
+                    originalFeeRate.GetFee(GetVirtualSize(inputScriptType))
+                    : MaxFeeBumpContribution;
             if (MinimumFeeRate is FeeRate v)
                 optionalParameters.MinFeeRate = v;
 
@@ -66,11 +72,13 @@ namespace BTCPayServer.BIP78.Sender
             {
                 originalInputs.Enqueue((originalGlobalTx.Inputs[i], signedPSBT.Inputs[i]));
             }
+
             var originalOutputs = new Queue<(TxOut OriginalTxOut, PSBTOutput SignedPSBTOutput)>();
             for (int i = 0; i < originalGlobalTx.Outputs.Count; i++)
             {
                 originalOutputs.Enqueue((originalGlobalTx.Outputs[i], signedPSBT.Outputs[i]));
             }
+
             endpoint = ApplyOptionalParameters(endpoint, optionalParameters);
             var proposal = await SendOriginalTransaction(endpoint, originalPSBT, cancellationToken);
             // Checking that the PSBT of the receiver is clean
@@ -99,7 +107,8 @@ namespace BTCPayServer.BIP78.Sender
                 if (proposedPSBTInput.PartialSigs.Count != 0)
                     throw new PayjoinSenderException("The receiver added partial signatures to an input");
                 var proposedTxIn = proposalGlobalTx.Inputs.FindIndexedInput(proposedPSBTInput.PrevOut).TxIn;
-                bool isOurInput = originalInputs.Count > 0 && originalInputs.Peek().OriginalTxIn.PrevOut == proposedPSBTInput.PrevOut;
+                bool isOurInput = originalInputs.Count > 0 &&
+                                  originalInputs.Peek().OriginalTxIn.PrevOut == proposedPSBTInput.PrevOut;
                 // If it is one of our input
                 if (isOurInput)
                 {
@@ -112,7 +121,8 @@ namespace BTCPayServer.BIP78.Sender
                         throw new PayjoinSenderException("The receiver finalized one of our inputs");
                     // Verify that <code>non_witness_utxo</code> and <code>witness_utxo</code> are not specified.
                     if (proposedPSBTInput.NonWitnessUtxo != null || proposedPSBTInput.WitnessUtxo != null)
-                        throw new PayjoinSenderException("The receiver added non_witness_utxo or witness_utxo to one of our inputs");
+                        throw new PayjoinSenderException(
+                            "The receiver added non_witness_utxo or witness_utxo to one of our inputs");
                     sequences.Add(proposedTxIn.Sequence);
 
                     // Fill up the info from the original PSBT input so we can sign and get fees.
@@ -130,7 +140,8 @@ namespace BTCPayServer.BIP78.Sender
                         throw new PayjoinSenderException("The receiver did not finalized one of their input");
                     // Verify that non_witness_utxo or witness_utxo are filled in.
                     if (proposedPSBTInput.NonWitnessUtxo == null && proposedPSBTInput.WitnessUtxo == null)
-                        throw new PayjoinSenderException("The receiver did not specify non_witness_utxo or witness_utxo for one of their inputs");
+                        throw new PayjoinSenderException(
+                            "The receiver did not specify non_witness_utxo or witness_utxo for one of their inputs");
                     sequences.Add(proposedTxIn.Sequence);
                     // Verify that the payjoin proposal did not introduced mixed input's type.
                     if (inputScriptType != proposedPSBTInput.GetInputScriptPubKeyType())
@@ -147,7 +158,8 @@ namespace BTCPayServer.BIP78.Sender
                 throw new PayjoinSenderException("Mixed sequence detected in the proposal");
 
             if (!proposal.TryGetFee(out var newFee))
-                throw new PayjoinSenderException("The payjoin receiver did not included UTXO information to calculate fee correctly");
+                throw new PayjoinSenderException(
+                    "The payjoin receiver did not included UTXO information to calculate fee correctly");
             var additionalFee = newFee - originalFee;
             if (additionalFee < Money.Zero)
                 throw new PayjoinSenderException("The receiver decreased absolute fee");
@@ -158,7 +170,9 @@ namespace BTCPayServer.BIP78.Sender
                 // Verify that no keypaths is in the PSBT output
                 if (proposedPSBTOutput.HDKeyPaths.Count != 0)
                     throw new PayjoinSenderException("The receiver added keypaths to an output");
-                bool isOriginalOutput = originalOutputs.Count > 0 && originalOutputs.Peek().OriginalTxOut.ScriptPubKey == proposedPSBTOutput.ScriptPubKey;
+                bool isOriginalOutput = originalOutputs.Count > 0 &&
+                                        originalOutputs.Peek().OriginalTxOut.ScriptPubKey ==
+                                        proposedPSBTOutput.ScriptPubKey;
                 if (isOriginalOutput)
                 {
                     var originalOutput = originalOutputs.Dequeue();
@@ -167,14 +181,17 @@ namespace BTCPayServer.BIP78.Sender
                         var actualContribution = feeOutput.Value - proposedPSBTOutput.Value;
                         // The amount that was substracted from the output's value is less or equal to maxadditionalfeecontribution
                         if (actualContribution > optionalParameters.MaxAdditionalFeeContribution)
-                            throw new PayjoinSenderException("The actual contribution is more than maxadditionalfeecontribution");
+                            throw new PayjoinSenderException(
+                                "The actual contribution is more than maxadditionalfeecontribution");
                         // Make sure the actual contribution is only paying fee
                         if (actualContribution > additionalFee)
                             throw new PayjoinSenderException("The actual contribution is not only paying fee");
                         // Make sure the actual contribution is only paying for fee incurred by additional inputs
                         var additionalInputsCount = proposalGlobalTx.Inputs.Count - originalGlobalTx.Inputs.Count;
-                        if (actualContribution > originalFeeRate.GetFee(GetVirtualSize(inputScriptType)) * additionalInputsCount)
-                            throw new PayjoinSenderException("The actual contribution is not only paying for additional inputs");
+                        if (actualContribution > originalFeeRate.GetFee(GetVirtualSize(inputScriptType)) *
+                            additionalInputsCount)
+                            throw new PayjoinSenderException(
+                                "The actual contribution is not only paying for additional inputs");
                     }
                     else if (allowOutputSubstitution &&
                              originalOutput.OriginalTxOut.ScriptPubKey == paymentScriptPubKey)
@@ -186,12 +203,14 @@ namespace BTCPayServer.BIP78.Sender
                         if (originalOutput.OriginalTxOut.Value > proposedPSBTOutput.Value)
                             throw new PayjoinSenderException("The receiver decreased the value of one of the outputs");
                     }
+
                     // We fill up information we had on the signed PSBT, so we can sign it.
                     foreach (var hdKey in originalOutput.SignedPSBTOutput.HDKeyPaths)
                         proposedPSBTOutput.HDKeyPaths.Add(hdKey.Key, hdKey.Value);
                     proposedPSBTOutput.RedeemScript = originalOutput.SignedPSBTOutput.RedeemScript;
                 }
             }
+
             // Verify that all of sender's outputs from the original PSBT are in the proposal.
             if (originalOutputs.Count != 0)
             {
@@ -207,10 +226,12 @@ namespace BTCPayServer.BIP78.Sender
             if (optionalParameters.MinFeeRate is FeeRate minFeeRate)
             {
                 if (!proposal.TryGetEstimatedFeeRate(out var newFeeRate))
-                    throw new PayjoinSenderException("The payjoin receiver did not included UTXO information to calculate fee correctly");
+                    throw new PayjoinSenderException(
+                        "The payjoin receiver did not included UTXO information to calculate fee correctly");
                 if (newFeeRate < minFeeRate)
                     throw new PayjoinSenderException("The payjoin receiver created a payjoin with a too low fee rate");
             }
+
             return proposal;
         }
 
@@ -239,16 +260,19 @@ namespace BTCPayServer.BIP78.Sender
                 input.PartialSigs.Clear();
                 input.Unknown.Clear();
             }
+
             foreach (var output in original.Outputs)
             {
                 output.Unknown.Clear();
                 output.HDKeyPaths.Clear();
             }
+
             original.GlobalXPubs.Clear();
             return original;
         }
 
-        private async Task<PSBT> SendOriginalTransaction(Uri endpoint, PSBT originalTx, CancellationToken cancellationToken)
+        private async Task<PSBT> SendOriginalTransaction(Uri endpoint, PSBT originalTx,
+            CancellationToken cancellationToken)
         {
             return await _payjoinServerCommunicator.RequestPayjoin(endpoint, originalTx, cancellationToken);
         }
@@ -261,11 +285,13 @@ namespace BTCPayServer.BIP78.Sender
             List<string> parameters = new List<string>(3);
             parameters.Add($"v={clientParameters.Version}");
             if (clientParameters.AdditionalFeeOutputIndex is int additionalFeeOutputIndex)
-                parameters.Add($"additionalfeeoutputindex={additionalFeeOutputIndex.ToString(CultureInfo.InvariantCulture)}");
+                parameters.Add(
+                    $"additionalfeeoutputindex={additionalFeeOutputIndex.ToString(CultureInfo.InvariantCulture)}");
             if (clientParameters.DisableOutputSubstitution is bool disableoutputsubstitution)
                 parameters.Add($"disableoutputsubstitution={disableoutputsubstitution}");
             if (clientParameters.MaxAdditionalFeeContribution is Money maxAdditionalFeeContribution)
-                parameters.Add($"maxadditionalfeecontribution={maxAdditionalFeeContribution.Satoshi.ToString(CultureInfo.InvariantCulture)}");
+                parameters.Add(
+                    $"maxadditionalfeecontribution={maxAdditionalFeeContribution.Satoshi.ToString(CultureInfo.InvariantCulture)}");
             if (clientParameters.MinFeeRate is FeeRate minFeeRate)
                 parameters.Add($"minfeerate={minFeeRate.SatoshiPerByte.ToString(CultureInfo.InvariantCulture)}");
             endpoint = new Uri($"{requestUri}?{string.Join('&', parameters)}");
