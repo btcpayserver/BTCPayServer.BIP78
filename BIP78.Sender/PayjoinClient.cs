@@ -170,12 +170,16 @@ namespace BTCPayServer.BIP78.Sender
                 // Verify that no keypaths is in the PSBT output
                 if (proposedPSBTOutput.HDKeyPaths.Count != 0)
                     throw new PayjoinSenderException("The receiver added keypaths to an output");
-                bool isOriginalOutput = originalOutputs.Count > 0 &&
-                                        originalOutputs.Peek().OriginalTxOut.ScriptPubKey ==
-                                        proposedPSBTOutput.ScriptPubKey;
-                if (isOriginalOutput)
+                if (originalOutputs.Count == 0)
+                    continue;
+                var originalOutput = originalOutputs.Peek();
+                bool isOriginalOutput = originalOutput.OriginalTxOut.ScriptPubKey == proposedPSBTOutput.ScriptPubKey;
+                bool substitutedOutput = !isOriginalOutput &&
+                                         allowOutputSubstitution &&
+                                         originalOutput.OriginalTxOut.ScriptPubKey == paymentScriptPubKey;
+                if (isOriginalOutput || substitutedOutput)
                 {
-                    var originalOutput = originalOutputs.Dequeue();
+                    originalOutputs.Dequeue();
                     if (originalOutput.OriginalTxOut == feeOutput)
                     {
                         var actualContribution = feeOutput.Value - proposedPSBTOutput.Value;
@@ -193,33 +197,25 @@ namespace BTCPayServer.BIP78.Sender
                             throw new PayjoinSenderException(
                                 "The actual contribution is not only paying for additional inputs");
                     }
-                    else if (allowOutputSubstitution &&
-                             originalOutput.OriginalTxOut.ScriptPubKey == paymentScriptPubKey)
+                    else if (substitutedOutput)
                     {
                         // That's the payment output, the receiver may have changed it.
                     }
-                    else
+                    else // if (isOriginalOutput)
                     {
                         if (originalOutput.OriginalTxOut.Value > proposedPSBTOutput.Value)
                             throw new PayjoinSenderException("The receiver decreased the value of one of the outputs");
                     }
-
                     // We fill up information we had on the signed PSBT, so we can sign it.
                     foreach (var hdKey in originalOutput.SignedPSBTOutput.HDKeyPaths)
                         proposedPSBTOutput.HDKeyPaths.Add(hdKey.Key, hdKey.Value);
                     proposedPSBTOutput.RedeemScript = originalOutput.SignedPSBTOutput.RedeemScript;
                 }
             }
-
             // Verify that all of sender's outputs from the original PSBT are in the proposal.
             if (originalOutputs.Count != 0)
             {
-                if (!allowOutputSubstitution ||
-                    originalOutputs.Count != 1 ||
-                    originalOutputs.Dequeue().OriginalTxOut.ScriptPubKey != paymentScriptPubKey)
-                {
-                    throw new PayjoinSenderException("Some of our outputs are not included in the proposal");
-                }
+                throw new PayjoinSenderException("Some of our outputs are not included in the proposal");
             }
 
             // If minfeerate was specified, check that the fee rate of the payjoin transaction is not less than this value.
@@ -231,7 +227,6 @@ namespace BTCPayServer.BIP78.Sender
                 if (newFeeRate < minFeeRate)
                     throw new PayjoinSenderException("The payjoin receiver created a payjoin with a too low fee rate");
             }
-
             return proposal;
         }
 
@@ -245,6 +240,8 @@ namespace BTCPayServer.BIP78.Sender
                     return 68;
                 case ScriptPubKeyType.SegwitP2SH:
                     return 91;
+                case ScriptPubKeyType.TaprootBIP86:
+                    return 58;
                 default:
                     return 110;
             }

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
         <Title>Bitcoin BIP78 Payjoin Sender</Title>
@@ -11,12 +11,12 @@
         <Description>A library to help you add BIP78 payjoin sending support in your bitcoin wallet.</Description>
         <PackageProjectUrl>https://github.com/BTCPayServer/BTCPayServer.BIP78</PackageProjectUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageVersion>0.2.0</PackageVersion>
+        <PackageVersion>0.2.1</PackageVersion>
         <LangVersion>latest</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="NBitcoin" Version="5.0.67" />
+      <PackageReference Include="NBitcoin" Version="6.0.8" />
     </ItemGroup>
 
 </Project>
