@@ -30,9 +30,12 @@ namespace BTCPayServer.BIP78.Receiver
         public virtual void SetPaymentRequest(PayjoinPaymentRequest paymentRequest)
         {
             PaymentRequest = paymentRequest;
-            OriginalPaymentRequestOutput = OriginalPSBT.Outputs.Single(output =>
-                output.ScriptPubKey == paymentRequest.Destination.ScriptPubKey &&
-                output.Value.Equals(paymentRequest.Amount));
+            if (paymentRequest.Destination is not null && paymentRequest.Amount is not null)
+            {
+                OriginalPaymentRequestOutput = OriginalPSBT.Outputs.FirstOrDefault(output =>
+                    output.ScriptPubKey == paymentRequest.Destination.ScriptPubKey &&
+                    output.Value >= paymentRequest.Amount);
+            }
         }
 
         public PSBTOutput OriginalPaymentRequestOutput { get; protected set; }

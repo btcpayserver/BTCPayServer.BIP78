@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="7.0.9" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="7.0.9" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\BTCPayServer.BIP78.Nostr\BTCPayServer.BIP78.Nostr.csproj" />
+      <PackageReference Include="MudBlazor" Version="6.8.0" />
+
+        <PackageReference Include="NBitcoin" Version="7.0.27" />
+        <PackageReference Include="NBXplorer.Client" Version="4.2.5" />
+        <PackageReference Include="NNostr.Client" Version="0.0.33" />
+    </ItemGroup>
+
+</Project>
