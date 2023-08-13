@@ -6,7 +6,7 @@ It uses NBXplorer to track wallets, and a nostr relay to allow wallet<->wallet c
 Note: this is a prototype and does not have any form of polish. It is intended to only run on regtest and the payjoin proposal are simply for demonstration and not the recommended way to implement payjoin.
 
 ## Features
-* BIP78 payjoin over Nostr (see BIP78 addendum document)
+* BIP78 payjoin over Nostr (see [BIP78 addendum document](https://github.com/Kukks/BTCPayServer.BIP78/blob/nostr/BTCPayServer.BIP78.Nostr/README.md))
 * Payjoin Maker
   * Making a payment to someone who does not support Payjoin? No problem! This wallet can act as a payjoin maker: simply use its endpoint as the payjoin endpoint for your transaction, and it will enhance the tx, even though it is not the receiver of the transaction.
   * In combination with [NIP-15750 (Nostr Coinjoin Discovery)](https://github.com/nostr-protocol/nips/pull/384), users are able to advertise their endpoints as payjoin makers, and wallets can automatically use them as payjoin endpoints, similar in spirit to JoinMarket. When using with Payjoin over Nostr communication, all wallets can easily be a maker and taker, without a server, with an easily interoperable protocol.
