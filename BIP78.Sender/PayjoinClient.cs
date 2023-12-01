@@ -44,31 +44,27 @@ namespace BTCPayServer.BIP78.Sender
             var optionalParameters = new PayjoinClientParameters();
             var inputScriptType = wallet.ScriptPubKeyType;
             var paymentScriptPubKey = bip21.Address?.ScriptPubKey;
-            var changeOutput = signedPSBT.Outputs.CoinsFor(wallet, wallet.AccountKey, wallet.RootedKeyPath)
-                .Where(o => o.ScriptPubKey != paymentScriptPubKey)
-                .FirstOrDefault();
-            if (changeOutput is PSBTOutput o)
+            var changeOutput = signedPSBT.Outputs
+                .CoinsFor(wallet, wallet.AccountKey, wallet.RootedKeyPath)
+                .FirstOrDefault(o => o.ScriptPubKey != paymentScriptPubKey);
+            if (changeOutput is { } o)
                 optionalParameters.AdditionalFeeOutputIndex = (int) o.Index;
             if (!signedPSBT.TryGetEstimatedFeeRate(out var originalFeeRate))
                 throw new ArgumentException("signedPSBT should have utxo information", nameof(signedPSBT));
             var originalFee = signedPSBT.GetFee();
-            if (changeOutput is PSBTOutput)
-                optionalParameters.MaxAdditionalFeeContribution = MaxFeeBumpContribution is null
-                    ?
-                    // By default, we want to keep same fee rate and a single additional input
-                    originalFeeRate.GetFee(GetVirtualSize(inputScriptType))
-                    : MaxFeeBumpContribution;
-            if (MinimumFeeRate is FeeRate v)
+            if (changeOutput is not null)
+                optionalParameters.MaxAdditionalFeeContribution = MaxFeeBumpContribution ?? originalFeeRate.GetFee(GetVirtualSize(inputScriptType));
+            if (MinimumFeeRate is { } v)
                 optionalParameters.MinFeeRate = v;
 
-            bool allowOutputSubstitution = !(optionalParameters.DisableOutputSubstitution is true);
-            if (bip21.UnknowParameters.TryGetValue("pjos", out var pjos) && pjos == "0")
+            var allowOutputSubstitution = optionalParameters.DisableOutputSubstitution is not true;
+            if (bip21.UnknownParameters.TryGetValue("pjos", out var pjos) && pjos == "0")
                 allowOutputSubstitution = false;
-            PSBT originalPSBT = CreateOriginalPSBT(signedPSBT);
-            Transaction originalGlobalTx = signedPSBT.GetGlobalTransaction();
-            TxOut feeOutput = changeOutput == null ? null : originalGlobalTx.Outputs[changeOutput.Index];
+            var originalPSBT = CreateOriginalPSBT(signedPSBT);
+            var originalGlobalTx = signedPSBT.GetGlobalTransaction();
+            var feeOutput = changeOutput == null ? null : originalGlobalTx.Outputs[changeOutput.Index];
             var originalInputs = new Queue<(TxIn OriginalTxIn, PSBTInput SignedPSBTInput)>();
-            for (int i = 0; i < originalGlobalTx.Inputs.Count; i++)
+            for (var i = 0; i < originalGlobalTx.Inputs.Count; i++)
             {
                 originalInputs.Enqueue((originalGlobalTx.Inputs[i], signedPSBT.Inputs[i]));
             }
@@ -79,8 +75,7 @@ namespace BTCPayServer.BIP78.Sender
                 originalOutputs.Enqueue((originalGlobalTx.Outputs[i], signedPSBT.Outputs[i]));
             }
 
-            endpoint = ApplyOptionalParameters(endpoint, optionalParameters);
-            var proposal = await SendOriginalTransaction(endpoint, originalPSBT, cancellationToken);
+            var proposal = await SendOriginalTransaction(endpoint, originalPSBT, optionalParameters, cancellationToken);
             // Checking that the PSBT of the receiver is clean
             if (proposal.GlobalXPubs.Any())
             {
@@ -107,8 +102,8 @@ namespace BTCPayServer.BIP78.Sender
                 if (proposedPSBTInput.PartialSigs.Count != 0)
                     throw new PayjoinSenderException("The receiver added partial signatures to an input");
                 var proposedTxIn = proposalGlobalTx.Inputs.FindIndexedInput(proposedPSBTInput.PrevOut).TxIn;
-                bool isOurInput = originalInputs.Count > 0 &&
-                                  originalInputs.Peek().OriginalTxIn.PrevOut == proposedPSBTInput.PrevOut;
+                var isOurInput = originalInputs.Count > 0 &&
+                                 originalInputs.Peek().OriginalTxIn.PrevOut == proposedPSBTInput.PrevOut;
                 // If it is one of our input
                 if (isOurInput)
                 {
@@ -173,10 +168,10 @@ namespace BTCPayServer.BIP78.Sender
                 if (originalOutputs.Count == 0)
                     continue;
                 var originalOutput = originalOutputs.Peek();
-                bool isOriginalOutput = originalOutput.OriginalTxOut.ScriptPubKey == proposedPSBTOutput.ScriptPubKey;
-                bool substitutedOutput = !isOriginalOutput &&
-                                         allowOutputSubstitution &&
-                                         originalOutput.OriginalTxOut.ScriptPubKey == paymentScriptPubKey;
+                var isOriginalOutput = originalOutput.OriginalTxOut.ScriptPubKey == proposedPSBTOutput.ScriptPubKey;
+                var substitutedOutput = !isOriginalOutput &&
+                                        allowOutputSubstitution &&
+                                        originalOutput.OriginalTxOut.ScriptPubKey == paymentScriptPubKey;
                 if (isOriginalOutput || substitutedOutput)
                 {
                     originalOutputs.Dequeue();
@@ -238,19 +233,14 @@ namespace BTCPayServer.BIP78.Sender
 
         private int GetVirtualSize(ScriptPubKeyType? scriptPubKeyType)
         {
-            switch (scriptPubKeyType)
+            return scriptPubKeyType switch
             {
-                case ScriptPubKeyType.Legacy:
-                    return 148;
-                case ScriptPubKeyType.Segwit:
-                    return 68;
-                case ScriptPubKeyType.SegwitP2SH:
-                    return 91;
-                case ScriptPubKeyType.TaprootBIP86:
-                    return 58;
-                default:
-                    return 110;
-            }
+                ScriptPubKeyType.Legacy => 148,
+                ScriptPubKeyType.Segwit => 68,
+                ScriptPubKeyType.SegwitP2SH => 91,
+                ScriptPubKeyType.TaprootBIP86 => 58,
+                _ => 110
+            };
         }
 
         private static PSBT CreateOriginalPSBT(PSBT signedPSBT)
@@ -275,30 +265,10 @@ namespace BTCPayServer.BIP78.Sender
         }
 
         private async Task<PSBT> SendOriginalTransaction(Uri endpoint, PSBT originalTx,
+            PayjoinClientParameters parameters,
             CancellationToken cancellationToken)
         {
-            return await _payjoinServerCommunicator.RequestPayjoin(endpoint, originalTx, cancellationToken);
-        }
-
-        private static Uri ApplyOptionalParameters(Uri endpoint, PayjoinClientParameters clientParameters)
-        {
-            var requestUri = endpoint.AbsoluteUri;
-            if (requestUri.IndexOf('?', StringComparison.OrdinalIgnoreCase) is int i && i != -1)
-                requestUri = requestUri.Substring(0, i);
-            List<string> parameters = new List<string>(3);
-            parameters.Add($"v={clientParameters.Version}");
-            if (clientParameters.AdditionalFeeOutputIndex is int additionalFeeOutputIndex)
-                parameters.Add(
-                    $"additionalfeeoutputindex={additionalFeeOutputIndex.ToString(CultureInfo.InvariantCulture)}");
-            if (clientParameters.DisableOutputSubstitution is bool disableoutputsubstitution)
-                parameters.Add($"disableoutputsubstitution={disableoutputsubstitution}");
-            if (clientParameters.MaxAdditionalFeeContribution is Money maxAdditionalFeeContribution)
-                parameters.Add(
-                    $"maxadditionalfeecontribution={maxAdditionalFeeContribution.Satoshi.ToString(CultureInfo.InvariantCulture)}");
-            if (clientParameters.MinFeeRate is FeeRate minFeeRate)
-                parameters.Add($"minfeerate={minFeeRate.SatoshiPerByte.ToString(CultureInfo.InvariantCulture)}");
-            endpoint = new Uri($"{requestUri}?{string.Join('&', parameters)}");
-            return endpoint;
+            return await _payjoinServerCommunicator.RequestPayjoin(endpoint, originalTx, parameters, cancellationToken);
         }
     }
 }

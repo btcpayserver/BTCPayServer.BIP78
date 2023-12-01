@@ -1,0 +1,84 @@
+services:
+  nbxplorer:
+    image: kukks/nbxplorer:cors
+    restart: unless-stopped
+    ports:
+      - "32838:32838"
+    expose:
+      - "32838"
+    environment:
+      NBXPLORER_NETWORK: regtest
+      NBXPLORER_CHAINS: "btc"
+      NBXPLORER_BTCRPCURL: http://bitcoind:43782/
+      NBXPLORER_BTCNODEENDPOINT: bitcoind:39388
+      NBXPLORER_BTCRPCUSER: ceiwHEbqWI83
+      NBXPLORER_BTCRPCPASSWORD: DwubwWsoo3
+      NBXPLORER_BIND: 0.0.0.0:32838
+      NBXPLORER_MINGAPSIZE: 5
+      NBXPLORER_MAXGAPSIZE: 10
+      NBXPLORER_VERBOSE: 1
+      NBXPLORER_POSTGRES: User ID=postgres;Include Error Detail=true;Host=postgres;Port=5432;Database=nbxplorer
+      NBXPLORER_EXPOSERPC: 1
+      NBXPLORER_NOAUTH: 1
+    depends_on:
+      - bitcoind
+      - postgres
+
+  bitcoind:
+    restart: unless-stopped
+    image: btcpayserver/bitcoin:25.0
+    environment:
+      BITCOIN_NETWORK: regtest
+      BITCOIN_WALLETDIR: "/data/wallets"
+      BITCOIN_EXTRA_ARGS: |-
+        rpcuser=ceiwHEbqWI83
+        rpcpassword=DwubwWsoo3
+        rpcport=43782
+        rpcbind=0.0.0.0:43782
+        rpcallowip=0.0.0.0/0
+        port=39388
+        whitelist=0.0.0.0/0
+        zmqpubrawblock=tcp://0.0.0.0:28332
+        zmqpubrawtx=tcp://0.0.0.0:28333
+        deprecatedrpc=signrawtransaction
+        fallbackfee=0.0002
+    ports:
+      - "43782:43782"
+      - "39388:39388"
+    expose:
+      - "43782" # RPC
+      - "39388" # P2P
+      - "28332" # ZMQ
+      - "28333" # ZMQ
+    volumes:
+      - "bitcoin_datadir:/data"
+
+  nnostr-relay:
+    restart: unless-stopped
+    image: kukks/nnostr-relay:v0.0.17
+    container_name: nnostr-relay
+    environment:
+      NOSTR_CONNECTIONSTRINGS__RelayDatabase: User ID=postgres;Host=postgres;Port=5432;Database=nnostr
+      ASPNETCORE_URLS: "http://0.0.0.0:80"
+    links:
+      - postgres
+    volumes:
+      - "nnostr_datadir:/datadir"
+    ports:
+      - "65467:80"
+  postgres:
+    image: postgres:13.10
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - "postgres_datadir:/var/lib/postgresql/data"
+    ports:
+      - "65466:5432"
+    expose:
+      - "5432"
+
+
+volumes:
+  postgres_datadir:
+  bitcoin_datadir:
+  nnostr_datadir:

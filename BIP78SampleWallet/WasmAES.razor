@@ -1,0 +1,40 @@
+﻿@using NNostr.Client.Crypto
+@code
+{
+    [Inject]
+    public IJSRuntime JsRuntime { get; set; }
+
+    protected override Task OnInitializedAsync()
+    {
+        StateManager.Encryptor = new WasmAESEncryptor(JsRuntime);
+        return base.OnInitializedAsync();
+    }
+    public class WasmAESEncryptor : IAesEncryption
+    {
+        private readonly IJSRuntime _runtime;
+        public WasmAESEncryptor (IJSRuntime runtime)
+        {
+            _runtime = runtime;
+        }
+
+
+        public class aescbcencryptresult
+        {
+            public byte[] iv{ get; set; }
+            public byte[] cipherText{ get; set; }
+        }
+
+
+        public async ValueTask<(byte[] CipherText, byte[] Iv)> EncryptAsync(byte[] plainText, byte[] key)
+        {
+            var result =await _runtime.InvokeAsync<aescbcencryptresult>("aes_cbc_encrypt", plainText, key);
+
+            return ( result.cipherText, result.iv);
+        }
+
+        public async ValueTask<byte[]> DecryptAsync(byte[] cipherText, byte[] key, byte[] iv)
+        {
+            return await _runtime.InvokeAsync<byte[]>("aes_cbc_decrypt", cipherText, iv, key);
+        }
+    }
+}

@@ -1,0 +1,3 @@
+[submodule "gh_pages"]
+	path = gh_pages
+	url = https://github.com/Kukks/BTCPayServer.BIP78

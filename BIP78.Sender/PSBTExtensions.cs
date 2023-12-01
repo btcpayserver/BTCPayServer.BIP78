@@ -9,7 +9,7 @@ namespace BTCPayServer.BIP78.Sender
     {
         public static bool TryGetPayjoinEndpoint(this BitcoinUrlBuilder bip21, out Uri endpoint)
         {
-            endpoint = bip21.UnknowParameters.TryGetValue($"{PayjoinClient.BIP21EndpointKey}", out var uri) ? new Uri(uri, UriKind.Absolute) : null;
+            endpoint = bip21.UnknownParameters.TryGetValue($"{PayjoinClient.BIP21EndpointKey}", out var uri) ? new Uri(uri, UriKind.Absolute) : null;
             return endpoint != null;
         }
         public static ScriptPubKeyType? GetInputsScriptPubKeyType(this PSBT psbt)
@@ -27,19 +27,23 @@ namespace BTCPayServer.BIP78.Sender
 
         public static ScriptPubKeyType? GetInputScriptPubKeyType(this PSBTInput i)
         {
-            var scriptPubKey = i.GetTxOut().ScriptPubKey;
+            var scriptPubKey = i.GetTxOut()?.ScriptPubKey;
+            if (scriptPubKey is null)
+                return null;
             if (scriptPubKey.IsScriptType(ScriptType.P2PKH))
                 return ScriptPubKeyType.Legacy;
             if (scriptPubKey.IsScriptType(ScriptType.P2WPKH))
                 return ScriptPubKeyType.Segwit;
             if (scriptPubKey.IsScriptType(ScriptType.P2SH) &&
-                i.FinalScriptWitness is WitScript &&
-                PayToWitPubKeyHashTemplate.Instance.ExtractWitScriptParameters(i.FinalScriptWitness) is { })
+                i.FinalScriptWitness is not null &&
+                PayToWitPubKeyHashTemplate.Instance.ExtractWitScriptParameters(i.FinalScriptWitness) is not null)
                 return ScriptPubKeyType.SegwitP2SH;
             if (scriptPubKey.IsScriptType(ScriptType.P2SH) &&
-                i.RedeemScript is Script &&
+                i.RedeemScript is not null &&
                 PayToWitPubKeyHashTemplate.Instance.CheckScriptPubKey(i.RedeemScript))
                 return ScriptPubKeyType.SegwitP2SH;
+            if (scriptPubKey.IsScriptType(ScriptType.Taproot))
+                return ScriptPubKeyType.TaprootBIP86;
             return null;
         }
     }

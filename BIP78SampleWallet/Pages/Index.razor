@@ -1,0 +1,440 @@
+﻿@page "/"
+@using NBitcoin
+@using NBitcoin.Payment
+@implements IDisposable
+@using NBXplorer.DerivationStrategy
+@using NBXplorer.Models
+@using NNostr.Client
+@using BTCPayServer.BIP78.Sender
+@using BTCPayServer.BIP78.Nostr
+@inject StateManager StateManager
+@inject ISnackbar Snackbar
+
+@if (Loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="position: fixed; top: 0; left: 0; height: 4px; width: 100%"/>
+}
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-1">
+
+    <MudStack Class="mt-4">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.h6">Status</MudText>
+            <MudDivider></MudDivider>
+            <MudText>Nostr Relay: @StateManager.NostrRelayUrl @((StateManager.NostrClient as NostrClient)?.State?.ToString() ?? "Not Connected")</MudText>
+            <MudText>NBXplorer: @StateManager.NBXplorerUrl @(StateManager.ExplorerClient == null ? "Not Connected" : "Connected on") @StateManager.ExplorerClient?.Network.NBitcoinNetwork.ChainName</MudText>
+            @if (StateManager.ExplorerClient is null)
+            {
+                <MudButton OnClick="Connect" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Start" Color="Color.Primary" Disabled="Loading">Start Connections (NBXplorer & Nostr)</MudButton>
+            }
+        </MudPaper>
+        @if (Connected)
+        {
+            <MudPaper Class="pa-4"Elevation="1">
+                <MudText Typo="Typo.h6">Wallet</MudText>
+                <MudDivider></MudDivider>
+                @if (StateManager.Wallet is null)
+                {
+                    <MudText>No wallet available yet</MudText>
+                    <MudButton OnClick="GenerateWallet" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Create" Color="Color.Primary" Disabled="Loading">Create wallet</MudButton>
+                }
+                else
+                {
+                    <MudText>@StateManager.Wallet.Mnemonic</MudText>
+                    <MudText >@StateManager.Wallet.DerivationScheme.ToString()</MudText>
+                    <MudDivider></MudDivider>
+
+                    <MudText Typo="Typo.h6">Balance & Coins</MudText>
+                    @if (StateManager.BalanceResult is not null)
+                    {
+                        <MudChipSet ReadOnly="true">
+                            <MudChip Color="Color.Primary">Confirmed: @StateManager.BalanceResult.Confirmed BTC</MudChip>
+                            <MudChip Color="Color.Primary">Unconfirmed: @StateManager.BalanceResult.Unconfirmed BTC</MudChip>
+                            <MudChip Color="Color.Primary">Available: @StateManager.BalanceResult.Available BTC</MudChip>
+                            <MudChip Color="Color.Primary">Total: @StateManager.BalanceResult.Total BTC</MudChip>
+
+                        </MudChipSet>
+                    }
+                    @if (StateManager.CoinsResult is not null)
+                    {
+                        <MudTable Items="@StateManager.CoinsResult" Dense="true" Outlined="true" Class="mt-4">
+                            <HeaderContent>
+                                <MudTh>Amount</MudTh>
+                                <MudTh>Address</MudTh>
+                                <MudTh>Confirmations</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@context.Value</MudTd>
+                                <MudTd>@context.ScriptPubKey.GetDestinationAddress(StateManager.ExplorerClient!.Network.NBitcoinNetwork)</MudTd>
+                                <MudTd>@context.Confirmations</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                    @if (StateManager.TransactionsResult is not null)
+                    {
+                        var txs = StateManager.TransactionsResult.UnconfirmedTransactions.Transactions
+                            .Concat(StateManager.TransactionsResult.ConfirmedTransactions.Transactions).OrderByDescending(t => t.Timestamp);
+                        <MudTable Items="@txs" Dense="true" Outlined="true" Class="mt-4">
+                            <HeaderContent>
+                                <MudTh>Transaction</MudTh>
+                                <MudTh>Amount</MudTh>
+                                <MudTh>Confirmations</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@context.TransactionId</MudTd>
+                                <MudTd>@context.BalanceChange BTC</MudTd>
+                                <MudTd>@context.Confirmations</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+
+                    <MudButton OnClick="UpdateBalance" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Refresh" Color="Color.Primary" Disabled="Loading">Refresh</MudButton>
+                    <MudButton OnClick="CreateAddress" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Create" Color="Color.Primary" Disabled="Loading">Generate address</MudButton>
+                }
+
+
+            </MudPaper>
+            @if (StateManager.Wallet is not null)
+            {
+                <MudPaper Class="pa-4"Elevation="1">
+                    <MudText Typo="Typo.h6">Send</MudText>
+                    <MudDivider></MudDivider>
+                    <MudTextField
+                        @bind-Value="SendDestination"
+                        Label="BIP21 Destination"
+                        Variant="Variant.Text"
+                        Placeholder="bitcoin:address?amount=1&pj=nostr:npub.."
+                        Disabled="Loading"
+                        InputType="InputType.Url"
+                        Adornment="Adornment.End"
+                        AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="SendToDestination">
+                    </MudTextField>
+
+                </MudPaper>
+
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Receive</MudText>
+
+                    <MudSwitch @bind-Checked="StateManager.AllowCoordinationModeForStaticKey" Color="Color.Secondary" Label="Enable Payjoin Maker"/>
+                    @if (StateManager.AllowCoordinationModeForStaticKey)
+                    {
+                        <MudTextField
+                            Value="@StateManager.GenerateEndpoint().ToString()"
+                            Label="Use this as the pj endpoint for any transaction"
+                            Variant="Variant.Text"
+                            ReadOnly="true">
+                        </MudTextField>
+                        <MudDivider></MudDivider>
+                    }
+                    <MudTextField
+                        @bind-Value="PRAmount"
+                        Label="Amount to request"
+                        Variant="Variant.Text"
+                        Placeholder="0.123"
+                        Disabled="Loading"
+                        InputType="InputType.Number"
+                        Adornment="Adornment.End"
+                        AdornmentIcon="@Icons.Material.Filled.Create"
+                        OnAdornmentClick="CreatePaymentRequest">
+                    </MudTextField>
+                    <MudTable Items="@StateManager.Requests" Dense="true" Outlined="true" Class="mt-4">
+                        <HeaderContent>
+                            <MudTh>BIP21</MudTh>
+                            <MudTh>Sender Original Tx</MudTh>
+                            <MudTh>Receiver Proposed Tx</MudTh>
+                            <MudTh>Status</MudTh>
+
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Key</MudTd>
+                            <MudTd>@context.Value.OriginalTxId</MudTd>
+                            <MudTd>@context.Value.ProposedTxId</MudTd>
+                            <MudTd>
+                                @if (context.Value.OriginalTxId is null && context.Value.DetectedTxId is null)
+                                {
+                                    <MudText>Pending</MudText>
+                                }
+                                else if ( context.Value.DetectedTxId is not null && context.Value.DetectedTxId != context.Value.OriginalTxId &&  context.Value.DetectedTxId != context.Value.ProposedTxId )
+                                {
+                                    <MudText>Paid: Regular payment </MudText>
+                                }
+                                else if (context.Value.OriginalTxId is not null && context.Value.DetectedTxId is null)
+                                {
+                                    <MudText>Pending: Payjoin initiated</MudText>
+                                }
+                                else if (context.Value.OriginalTxId == context.Value.DetectedTxId)
+                                {
+                                    <MudText>Paid: Payjoin attempted but failed</MudText>
+                                }
+                                else if (context.Value.ProposedTxId == context.Value.DetectedTxId)
+                                {
+                                    <MudText>Paid: Payjoin </MudText>
+                                }
+                                else
+                                {
+                                    <MudText>Unknown status or error.</MudText>
+                                }
+                                
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudPaper>
+            }
+
+            @if (StateManager.ExplorerClient?.Network?.NBitcoinNetwork?.ChainName == ChainName.Regtest)
+            {
+                <MudPaper Class="pa-4"Elevation="1">
+                    <MudText Typo="Typo.h6">Regtest tools</MudText>
+                    <MudDivider></MudDivider>
+                    <MudButtonGroup>
+                        <MudButton OnClick="MineBlock" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.GeneratingTokens" Color="Color.Primary" Disabled="Loading">Mine block</MudButton>
+                        @if (StateManager.Wallet is not null)
+                        {
+                            <MudButton OnClick="FundWallet" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.CurrencyBitcoin" Color="Color.Primary" Disabled="Loading">Fund wallet</MudButton>
+                        }
+                    </MudButtonGroup>
+
+                </MudPaper>
+            }
+        }
+    </MudStack>
+</MudContainer>
+
+@code{
+
+    public decimal PRAmount { get; set; }
+    public string SendDestination { get; set; }
+    public bool Connected => StateManager.ExplorerClient != null;
+    public bool Loading { get; set; } = true;
+
+    protected override Task OnInitializedAsync()
+    {
+        StateManager.StateUpdated += StateManagerOnStateUpdated;
+        Loading = false;
+        _ = Connect().ContinueWith(async task =>
+        {
+            Loading = true;
+            while (StateManager.ExplorerClient is null)
+            {
+                await Task.Delay(100);
+            }
+            Loading = false;
+            return GenerateWallet();
+
+        });
+        return base.OnInitializedAsync();
+    }
+
+    private void StateManagerOnStateUpdated(object? sender, EventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+
+    private Task Connect()
+    {
+        _ = DoTask(() => StateManager.StartAsync(CancellationToken.None));
+        return Task.CompletedTask;
+    }
+
+    private Task GenerateWallet()
+    {
+        _ = DoTask(StateManager.GenerateWallet);
+        return Task.CompletedTask;
+    }
+
+    private Task UpdateBalance()
+    {
+        _ = DoTask(StateManager.UpdateBalance);
+        return Task.CompletedTask;
+    }
+    private Task CreateAddress()
+    {
+        _ = DoTask(async () =>
+        {
+          var address = await  StateManager.ExplorerClient.GetUnusedAsync(StateManager.Wallet.DerivationScheme, DerivationFeature.Deposit, 0, true);
+            Snackbar.Add(address.Address.ToString(), Severity.Normal, options =>
+            {
+                options.ShowCloseIcon = true;
+                options.VisibleStateDuration = 100000000;
+            });
+        });
+        return Task.CompletedTask;
+    }
+
+    private Task MineBlock()
+    {
+        _ = DoTask(() => StateManager.MineBlock());
+        return Task.CompletedTask;
+    }
+
+    private Task FundWallet()
+    {
+        _ = DoTask(async () =>
+        {
+            var address = await StateManager.ExplorerClient.GetUnusedAsync(StateManager.Wallet.DerivationScheme, DerivationFeature.Deposit, 0, true);
+            await StateManager.ExplorerClient.RPCClient.SendToAddressAsync(address.Address, Money.Coins((decimal) ((Random.Shared.NextDouble() * Math.Abs(1 - 0.00001)) + 00001)));
+        });
+        return Task.CompletedTask;
+    }
+
+    private Task DoTask(Func<Task> task)
+    {
+        if (Loading)
+            return Task.CompletedTask;
+        try
+        {
+            Loading = true;
+            _ = InvokeAsync(StateHasChanged);
+            _ = task.Invoke().ContinueWith(task1 =>
+            {
+                Loading = false;
+                _ = InvokeAsync(StateHasChanged);
+            });
+        }
+        catch
+        {
+            Loading = false;
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        StateManager.StateUpdated -= StateManagerOnStateUpdated;
+    }
+
+    private Task CreatePaymentRequest()
+    {
+        return DoTask(async () =>
+        {
+            if (PRAmount > 0)
+            {
+                var address = await StateManager.ExplorerClient.GetUnusedAsync(StateManager.Wallet.DerivationScheme, DerivationFeature.Deposit, 0, true);
+
+                var pjEndpoint = StateManager.GenerateUniqueEndpoint(null, out var endpointKey);
+                var bip21 = $"bitcoin:{address.Address}?amount={PRAmount}&pj={pjEndpoint}";
+                StateManager.Requests.TryAdd(bip21,new NostrPayjoinPaymentRequest()
+                {
+                    Amount = Money.Coins(PRAmount),
+                    Destination = address.Address,
+                    NostrKey = endpointKey,
+                    Expiry = null
+                });
+                PRAmount = 0;
+            }
+        });
+        
+    }
+
+    private Task SendToDestination()
+    {
+        return DoTask(async () =>
+        {
+            if (string.IsNullOrEmpty(SendDestination))
+            {
+                Snackbar.Add("You need to provide a destination first", Severity.Error);
+            }
+            else
+            {
+                BitcoinUrlBuilder bitcoinUrlBuilder;
+                try
+                {
+                    bitcoinUrlBuilder = new BitcoinUrlBuilder(SendDestination, StateManager.ExplorerClient.Network.NBitcoinNetwork);
+                }
+                catch (Exception e)
+                {
+                    Snackbar.Add("The destination is invalid (wrong network or not BIP21?)", Severity.Error);
+                    return;
+                }
+                if (bitcoinUrlBuilder.Amount is null)
+                {
+                    Snackbar.Add("This sample wallet only supports destinations with explicit amounts", Severity.Error);
+                    return;
+                }
+                await StateManager.UpdateBalance();
+                if ((StateManager.BalanceResult?.Available as Money) < bitcoinUrlBuilder.Amount)
+                {
+                    Snackbar.Add("Insufficient funds", Severity.Error);
+                    return;
+                }
+                CreatePSBTResponse psbt = null;
+                try
+                {
+                    psbt = await StateManager.ExplorerClient.CreatePSBTAsync(StateManager.Wallet.DerivationScheme, new CreatePSBTRequest()
+                    {
+                        
+                        FeePreference = new FeePreference()
+                        {
+                            BlockTarget = 1,
+                            FallbackFeeRate = new FeeRate(10m)
+                        },
+                        Destinations = new List<CreatePSBTDestination>()
+                        {
+                            new CreatePSBTDestination()
+                            {
+                                Amount = (Money) bitcoinUrlBuilder.Amount,
+                                Destination = bitcoinUrlBuilder.Address
+                            }
+                        }
+                    });
+                }
+                catch (Exception e)
+                {
+                    Snackbar.Add(e.Message, Severity.Error);
+                    return;
+                }
+                psbt.PSBT = psbt.PSBT.SignAll(StateManager.Wallet.DerivationScheme, StateManager.Wallet.AccountHDKey, StateManager.Wallet.AccountKeyPath);
+
+                try
+                {
+                    var pjClient = new PayjoinClient(new CompositePayjoinServerCommunicator(uri =>
+                    {
+                        switch (uri.Scheme)
+                        {
+                            case "nostr":
+                                return new NostrPayjoinServerCommunicator()
+                                {
+                                    NostrAesEncryption = StateManager.Encryptor
+                                };
+                            default:
+                                return new HttpClientPayjoinServerCommunicator();
+                        }
+
+                    }));
+                    var payjoinPSBT = await pjClient.RequestPayjoin(bitcoinUrlBuilder, StateManager, psbt.PSBT, new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
+                    payjoinPSBT.Settings.SigningOptions =
+                        new SigningOptions() {EnforceLowR = psbt?.Suggestions?.ShouldEnforceLowR ?? true};
+                    payjoinPSBT = payjoinPSBT.SignAll(StateManager.Wallet.DerivationScheme, StateManager.Wallet.AccountHDKey, StateManager.Wallet.AccountKeyPath);
+                    payjoinPSBT.Finalize();
+                    var payjoinTransaction = payjoinPSBT.ExtractTransaction();
+                    var hash = payjoinTransaction.GetHash();
+
+                    var bResult = await StateManager.ExplorerClient.BroadcastAsync(payjoinTransaction);
+                    if (bResult.Success)
+                    {
+                        Snackbar.Add("Successful payjoin", Severity.Success);
+                    }
+                    else
+                    {
+                        bResult = await StateManager.ExplorerClient.BroadcastAsync(psbt.PSBT.Finalize().ExtractTransaction());
+                        Snackbar.Add(bResult.Success ? "Failed to payjoin, broadcasted original tx" : "Failed to payjoin, also failed to broadcast original tx", Severity.Error);
+                    }
+
+                }
+                catch (Exception e)
+                {
+                    Snackbar.Add(e.Message, Severity.Error);
+                   var bResult = await StateManager.ExplorerClient.BroadcastAsync(psbt.PSBT.Finalize().ExtractTransaction());
+                    Snackbar.Add(bResult.Success ? "Failed to payjoin, broadcasted original tx" : "Failed to payjoin, also failed to broadcast original tx", Severity.Error);
+                }
+                finally
+                {
+                    Loading = false;
+                    await UpdateBalance();
+                }
+            }
+        });
+    }
+
+}

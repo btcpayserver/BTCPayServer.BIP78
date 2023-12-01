@@ -9,7 +9,7 @@ namespace BTCPayServer.BIP78.Receiver
     public class PayjoinPaymentRequest
     {
         public BitcoinAddress Destination { get; set; }
-        public Money Amount { get; set; }
+        public Money? Amount { get; set; }
     }
 
     public abstract class PayjoinReceiverWallet<TContext> where TContext : PayjoinProposalContext
@@ -31,7 +31,11 @@ namespace BTCPayServer.BIP78.Receiver
                     $"Could not match PSBT to a payment request");
             }
 
-            ctx.SetPaymentRequest(paymentRequest);
+            if(paymentRequest is not null)
+            {
+                ctx.SetPaymentRequest(paymentRequest);
+            }
+
 
             if (ctx.PayjoinParameters.Version != 1)
             {
@@ -108,31 +112,32 @@ namespace BTCPayServer.BIP78.Receiver
                     "Some of those inputs have already been used to make another payjoin transaction");
             }
 
-            var groupedOutputs = ctx.OriginalPSBT.Outputs.GroupBy(output => output.ScriptPubKey);
-            var paymentOutputs =
-                groupedOutputs.Where(outputs => outputs.Key == paymentRequest.Destination.ScriptPubKey);
-
-            if (!paymentOutputs.Any())
-            {
-                throw new PayjoinReceiverException(
-                    PayjoinReceiverHelper.GetErrorCode(PayjoinReceiverWellknownErrors.OriginalPSBTRejected),
-                    "PSBT does not pay to the BIP21 destination");
-            }
-
-            if (paymentOutputs.Sum(outputs => outputs.Sum(output => output.Value)) < paymentRequest.Amount)
-            {
-                throw new PayjoinReceiverException("invoice-not-fully-paid",
-                    "The transaction must pay the whole invoice");
-            }
-
-            if (ctx.PayjoinParameters.AdditionalFeeOutputIndex.HasValue && paymentOutputs.Any(outputs =>
-                outputs.Any(output => output.Index == ctx.PayjoinParameters.AdditionalFeeOutputIndex)))
-            {
-                throw new PayjoinReceiverException(
-                    PayjoinReceiverHelper.GetErrorCode(PayjoinReceiverWellknownErrors.OriginalPSBTRejected),
-                    "AdditionalFeeOutputIndex specified index of payment output");
-            }
-
+            // var groupedOutputs = ctx.OriginalPSBT.Outputs.GroupBy(output => output.ScriptPubKey);
+            // var paymentOutputs =groupedOutputs.Where(outputs => outputs.Key == paymentRequest.Destination?.ScriptPubKey).ToArray();
+            //
+            // if (paymentOutputs?.Any() is not true)
+            // {
+            //     throw new PayjoinReceiverException(
+            //         PayjoinReceiverHelper.GetErrorCode(PayjoinReceiverWellknownErrors.OriginalPSBTRejected),
+            //         "PSBT does not pay to the BIP21 destination");
+            // }
+            //
+            // if (paymentOutputs is not null)
+            // {
+            //     if (paymentOutputs.Sum(outputs => outputs.Sum(output => output.Value)) < paymentRequest.Amount)
+            //     {
+            //         throw new PayjoinReceiverException("invoice-not-fully-paid",
+            //             "The transaction must pay the whole invoice");
+            //     }
+            //
+            //     if (ctx.PayjoinParameters.AdditionalFeeOutputIndex.HasValue && paymentOutputs.Any(outputs =>
+            //             outputs.Any(output => output.Index == ctx.PayjoinParameters.AdditionalFeeOutputIndex)))
+            //     {
+            //         throw new PayjoinReceiverException(
+            //             PayjoinReceiverHelper.GetErrorCode(PayjoinReceiverWellknownErrors.OriginalPSBTRejected),
+            //             "AdditionalFeeOutputIndex specified index of payment output");
+            //     }
+            // }
             await ComputePayjoinModifications(ctx);
 
             if (ctx.PayjoinReceiverWalletProposal is null)
