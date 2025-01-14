@@ -42,7 +42,6 @@ namespace BTCPayServer.BIP78.Sender
             if (signedPSBT.IsAllFinalized())
                 throw new InvalidOperationException("The original PSBT should not be finalized.");
             var optionalParameters = new PayjoinClientParameters();
-            var inputScriptType = wallet.ScriptPubKeyType;
             var paymentScriptPubKey = bip21.Address?.ScriptPubKey;
             var changeOutput = signedPSBT.Outputs.CoinsFor(wallet, wallet.AccountKey, wallet.RootedKeyPath)
                 .Where(o => o.ScriptPubKey != paymentScriptPubKey)
@@ -56,7 +55,7 @@ namespace BTCPayServer.BIP78.Sender
                 optionalParameters.MaxAdditionalFeeContribution = MaxFeeBumpContribution is null
                     ?
                     // By default, we want to keep same fee rate and a single additional input
-                    originalFeeRate.GetFee(GetVirtualSize(inputScriptType))
+                    originalFeeRate.GetFee(110)
                     : MaxFeeBumpContribution;
             if (MinimumFeeRate is FeeRate v)
                 optionalParameters.MinFeeRate = v;
@@ -140,9 +139,6 @@ namespace BTCPayServer.BIP78.Sender
                         throw new PayjoinSenderException(
                             "The receiver did not specify non_witness_utxo or witness_utxo for one of their inputs");
                     sequences.Add(proposedTxIn.Sequence);
-                    // Verify that the payjoin proposal did not introduced mixed input's type.
-                    if (inputScriptType != proposedPSBTInput.GetInputScriptPubKeyType())
-                        throw new PayjoinSenderException("Mixed input type detected in the proposal");
                 }
             }
 
@@ -187,9 +183,9 @@ namespace BTCPayServer.BIP78.Sender
                         // Make sure the actual contribution is only paying fee
                         if (actualContribution > additionalFee)
                             throw new PayjoinSenderException("The actual contribution is not only paying fee");
-                        // Make sure the actual contribution is only paying for fee incurred by additional inputs
-                        var additionalInputsCount = proposalGlobalTx.Inputs.Count - originalGlobalTx.Inputs.Count;
-                        if (actualContribution > originalFeeRate.GetFee(GetVirtualSize(inputScriptType)) *
+						// This assumes an additional input can be up to 110 bytes.
+						var additionalInputsCount = proposalGlobalTx.Inputs.Count - originalGlobalTx.Inputs.Count;
+                        if (actualContribution > originalFeeRate.GetFee(110) *
                             additionalInputsCount)
                             throw new PayjoinSenderException(
                                 "The actual contribution is not only paying for additional inputs");
@@ -231,23 +227,6 @@ namespace BTCPayServer.BIP78.Sender
                     throw new PayjoinSenderException("The payjoin receiver created a payjoin with a too low fee rate");
             }
             return proposal;
-        }
-
-        private int GetVirtualSize(ScriptPubKeyType? scriptPubKeyType)
-        {
-            switch (scriptPubKeyType)
-            {
-                case ScriptPubKeyType.Legacy:
-                    return 148;
-                case ScriptPubKeyType.Segwit:
-                    return 68;
-                case ScriptPubKeyType.SegwitP2SH:
-                    return 91;
-                case ScriptPubKeyType.TaprootBIP86:
-                    return 58;
-                default:
-                    return 110;
-            }
         }
 
         private static PSBT CreateOriginalPSBT(PSBT signedPSBT)
