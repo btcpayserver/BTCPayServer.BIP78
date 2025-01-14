@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <InvariantGlobalization>true</InvariantGlobalization>
         <TargetFramework>netstandard2.1</TargetFramework>
         <Title>Bitcoin BIP78 Payjoin Sender</Title>
         <Authors>Andrew Camilleri / Kukks / BTCPay Server</Authors>
