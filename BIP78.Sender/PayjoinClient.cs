@@ -62,7 +62,7 @@ namespace BTCPayServer.BIP78.Sender
                 optionalParameters.MinFeeRate = v;
 
             bool allowOutputSubstitution = !(optionalParameters.DisableOutputSubstitution is true);
-            if (bip21.UnknowParameters.TryGetValue("pjos", out var pjos) && pjos == "0")
+            if (bip21.UnknownParameters.TryGetValue("pjos", out var pjos) && pjos == "0")
                 allowOutputSubstitution = false;
             PSBT originalPSBT = CreateOriginalPSBT(signedPSBT);
             Transaction originalGlobalTx = signedPSBT.GetGlobalTransaction();
@@ -119,10 +119,7 @@ namespace BTCPayServer.BIP78.Sender
                     // Verify the PSBT input is not finalized
                     if (proposedPSBTInput.IsFinalized())
                         throw new PayjoinSenderException("The receiver finalized one of our inputs");
-                    // Verify that <code>non_witness_utxo</code> and <code>witness_utxo</code> are not specified.
-                    if (proposedPSBTInput.NonWitnessUtxo != null || proposedPSBTInput.WitnessUtxo != null)
-                        throw new PayjoinSenderException(
-                            "The receiver added non_witness_utxo or witness_utxo to one of our inputs");
+
                     sequences.Add(proposedTxIn.Sequence);
 
                     // Fill up the info from the original PSBT input so we can sign and get fees.
