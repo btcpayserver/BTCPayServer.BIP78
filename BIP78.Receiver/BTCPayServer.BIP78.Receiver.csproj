@@ -2,6 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
+        <InvariantGlobalization>true</InvariantGlobalization>
         <Title>Bitcoin BIP78 Payjoin Receiver</Title>
         <Authors>Andrew Camilleri / Kukks / BTCPay Server</Authors>
         <Copyright>MIT</Copyright>
