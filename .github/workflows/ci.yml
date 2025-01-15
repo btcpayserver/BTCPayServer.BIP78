@@ -12,28 +12,28 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 3.1.x
-
-      # Run tests
-      - name: Test
-        run: dotnet test
+          dotnet-version: 8.0.x
 
       - name: Publish Sender NuGet
         if: ${{ github.ref == 'refs/heads/master' }} # Publish only when the push is on master
-        uses: brandedoutcast/publish-nuget@v2.5.5
+        uses: Rebel028/publish-nuget@v2.7.0
         with:
           PROJECT_FILE_PATH: BIP78.Sender/BTCPayServer.BIP78.Sender.csproj
           NUGET_KEY: ${{secrets.NUGET_KEY}}
           PACKAGE_NAME: BIP78.Sender
           INCLUDE_SYMBOLS: true
           VERSION_REGEX: ^\s*<PackageVersion>(.*)<\/PackageVersion>\s*$
+          TAG_COMMIT: true
+          TAG_FORMAT: BIP78.Sender/v*
 
       - name: Publish Receiver NuGet
         if: ${{ github.ref == 'refs/heads/master' }} # Publish only when the push is on master
-        uses: brandedoutcast/publish-nuget@v2.5.5
+        uses: Rebel028/publish-nuget@v2.7.0
         with:
           PROJECT_FILE_PATH: BIP78.Receiver/BTCPayServer.BIP78.Receiver.csproj
           NUGET_KEY: ${{secrets.NUGET_KEY}}
           PACKAGE_NAME: BIP78.Receiver
           INCLUDE_SYMBOLS: true
           VERSION_REGEX: ^\s*<PackageVersion>(.*)<\/PackageVersion>\s*$
+          TAG_COMMIT: true
+          TAG_FORMAT: BIP78.Receiver/v*
